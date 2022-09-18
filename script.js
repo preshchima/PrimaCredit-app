@@ -6,6 +6,8 @@ const account1 = {
   movements: [200, 450, -400, 3000, -650, -130, 70, 1300],
   interestRate: 1.2, // %
   pin: 1111,
+  locale: 'en-MY',
+  currency: 'EUR',
 };
 
 const account2 = {
@@ -13,6 +15,8 @@ const account2 = {
   movements: [5000, 3400, -150, -790, -3210, -1000, 8500, -30],
   interestRate: 1.5,
   pin: 2222,
+  locale: 'en-US',
+  currency: 'EUR',
 };
 
 const account3 = {
@@ -20,6 +24,8 @@ const account3 = {
   movements: [200, -200, 340, -300, -20, 50, 400, -460],
   interestRate: 0.7,
   pin: 3333,
+  locale: 'en-AU',
+  currency: 'USD',
 };
 
 const account4 = {
@@ -27,6 +33,8 @@ const account4 = {
   movements: [430, 1000, 700, 50, 90],
   interestRate: 1,
   pin: 4444,
+  locale: 'en-JY',
+  currency: 'USD',
 };
 
 const account5 = {
@@ -34,6 +42,8 @@ const account5 = {
   movements: [430, 1000, 700, 50, 90],
   interestRate: 1,
   pin: 5555,
+  locale: 'en-CA',
+  currency: 'GBP',
 };
 
 const account6 = {
@@ -41,6 +51,8 @@ const account6 = {
   movements: [430, 1000, 700, 50, 90],
   interestRate: 1,
   pin: 6666,
+  locale: 'en-GB',
+  currency: 'NGN',
 };
 
 const accounts = [account1, account2, account3, account4, account5, account6];
@@ -62,6 +74,13 @@ const inputTransferAmount = document.querySelector('.form__input--amount');
 
 const btnTransfer = document.querySelector('.form__btn--transfer');
 const btnLogin = document.querySelector('.login__btn');
+const inputLoanAmount = document.querySelector('.form__input--loan-amount');
+const btnLoan = document.querySelector('.form__btn--loan');
+const inputCloseUser = document.querySelector('.form__input--user');
+const inputClosePin = document.querySelector('.form__input--pin');
+const btnClose = document.querySelector('.form__btn--close');
+const btnSort = document.querySelector('.btn--sort');
+const labeldate = document.querySelector('.date');
 
 //create usernames for account
 const createUsernane = accounts => {
@@ -89,29 +108,56 @@ btnLogin.addEventListener('click', function (e) {
     inputPin.value = inputUsername.value = '';
     inputPin.blur();
 
-    displayMovements(currentUser.movements);
-    calDisplayBalance(currentUser.movements);
-    calDisplaySummary(currentUser.movements);
+    const now = new Date();
+    const options = {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'numeric',
+      day: '2-digit',
+      hourCycle: 'h12',
+      hour: '2-digit',
+      minute: '2-digit',
+    };
+
+    labeldate.textContent = formatDate(now, currentUser.locale, options);
+    displayMovements(currentUser);
+    calDisplayBalance(currentUser);
+    calDisplaySummary(currentUser);
   }
 });
 
-// // login
+// login
 // containerMain.style.display = 'grid';
 // displayMovements(account1.movements);
 // calDisplayBalance(account1.movements);
 // calDisplaySummary(account1.movements);
 
 //display movements on dashboard
-function displayMovements(movements) {
+function displayMovements(acc, sort) {
   containerMovements.innerHTML = '';
-  movements.forEach(function (mov, i) {
+  const movs = sort
+    ? acc.movements.slice(0).sort((a, b) => a - b)
+    : acc.movements;
+
+  const options = {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'numeric',
+    day: '2-digit',
+    hourCycle: 'h12',
+  };
+  movs.forEach(function (mov, i) {
     const type = mov > 0 ? 'deposit' : 'withdrawal';
 
     const html = `
   <div class="movements__row">
     <div class="movements__type movements__type--${type}">${i + 1} ${type}</div>
-    <div class="movements__date"> </div>
-    <div class="movements__value">${mov.toFixed(2)}€</div>
+    <div class="movements__date">${formatDate(new Date(), acc.locale)} </div>
+    <div class="movements__value">${formatCurrency(
+      mov,
+      acc.locale,
+      acc.currency
+    )}</div>
   </div>
 `;
     containerMovements.insertAdjacentHTML('afterbegin', html);
@@ -119,35 +165,43 @@ function displayMovements(movements) {
 }
 
 //calculate and display balance
-function calDisplayBalance(movements) {
-  const balance = movements.reduce((acc, mov) => {
+function calDisplayBalance(acc) {
+  const balance = acc.movements.reduce((acc, mov) => {
     return acc + mov;
   }, 0);
 
-  labelBalance.textContent = `${balance.toFixed(2)}€`;
+  labelBalance.textContent = `${formatCurrency(
+    balance,
+    acc.locale,
+    acc.currency
+  )}`;
 }
 
 //calculate and display summary
-function calDisplaySummary(movements) {
-  const deposit = movements
+function calDisplaySummary(acc) {
+  const deposit = acc.movements
     .filter(movement => {
       return movement > 0;
     })
     .reduce((acc, deposit, i, arr) => {
       return acc + deposit;
     }, 0);
-  labelIn.textContent = `${deposit.toFixed(2)}€`;
+  labelIn.textContent = `${formatCurrency(deposit, acc.locale, acc.currency)}`;
 
-  const withdrawal = movements
+  const withdrawal = acc.movements
     .filter(movement => {
       return movement < 0;
     })
     .reduce((acc, withdrawal, i, arr) => {
       return acc + withdrawal;
     }, 0);
-  labelOut.textContent = `${Math.abs(withdrawal).toFixed(2)}€`;
+  labelOut.textContent = `${formatCurrency(
+    Math.abs(withdrawal),
+    acc.locale,
+    acc.currency
+  )}`;
 
-  const interest = movements
+  const interest = acc.movements
     .filter(movement => {
       return movement > 100;
     })
@@ -155,7 +209,11 @@ function calDisplaySummary(movements) {
     .reduce((acc, withdrawal, i, arr) => {
       return acc + withdrawal;
     }, 0);
-  labelInterest.textContent = `${interest.toFixed(2)}€`;
+  labelInterest.textContent = `${formatCurrency(
+    interest,
+    acc.locale,
+    acc.currency
+  )}`;
 }
 
 //implementing transfer
@@ -170,9 +228,69 @@ btnTransfer.addEventListener('click', function (e) {
     receiver.movements.push(+inputTransferAmount.value);
 
     currentUser.movements.push(-+inputTransferAmount.value);
-    displayMovements(currentUser.movements);
-    calDisplayBalance(currentUser.movements);
-    calDisplaySummary(currentUser.movements);
+    displayMovements(currentUser);
+    calDisplayBalance(currentUser);
+    calDisplaySummary(currentUser);
   }
   inputTransferAmount.value = inputTransferTo.value = '';
 });
+
+//get loan
+btnLoan.addEventListener('click', function (e) {
+  e.preventDefault();
+  const acceptedLoanAmount =
+    currentUser.movements
+      .filter(mov => mov > 0)
+      .reduce((acc, mov) => acc + mov, 0) * 0.1;
+
+  if (!inputLoanAmount.value) return;
+
+  if (
+    +inputLoanAmount.value <= acceptedLoanAmount &&
+    +inputLoanAmount.value > 0
+  ) {
+    currentUser.movements.push(+inputLoanAmount.value);
+    displayMovements(currentUser);
+    calDisplayBalance(currentUser);
+    calDisplaySummary(currentUser);
+  }
+  inputLoanAmount.value = '';
+});
+
+//delete account
+btnClose.addEventListener('click', function (e) {
+  e.preventDefault();
+  if (
+    currentUser.username === inputCloseUser.value &&
+    currentUser.pin === +inputClosePin.value
+  ) {
+    inputClosePin.value = inputCloseUser.value = '';
+    const index = accounts.indexOf(currentUser);
+    accounts.splice(index, 1);
+
+    labelWelcome.textContent = `Welcome, Log in to get started`;
+    containerMain.style.display = 'none';
+  }
+});
+
+//sort movements
+let sort = false;
+btnSort.addEventListener('click', function (e) {
+  e.preventDefault();
+
+  displayMovements(currentUser, !sort);
+  sort = true;
+});
+
+//number format
+function formatCurrency(number, locale, currency) {
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: currency,
+  }).format(number);
+}
+
+//format date
+function formatDate(date, locale, options) {
+  return new Intl.DateTimeFormat(locale, options).format(date);
+}
